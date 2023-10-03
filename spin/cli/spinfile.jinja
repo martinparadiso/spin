@@ -1,0 +1,52 @@
+# spinfile
+import spin
+{% if cloud_init is not none %}
+import pathlib
+{% endif %}
+{% if plugins %}
+{% for plugin in plugins %}
+import {{ plugin }}
+{% endfor %}
+{% endif %}
+
+with spin.define.vm("{{ image }}", "{{ tag }}") as vm:
+    pass
+    # Change number of vCPUs
+{% if cpus is not defined or cpus is none %}
+    # vm.hardware.cpus = 2
+{% else %}
+    vm.hardware.cpus = {{ cpus }}
+{% endif %}
+
+    # Change the ammunt of memory
+{% if memory is not defined or memory is none %}
+    # vm.hardware.memory = spin.Size("2GiB")
+{% else %}
+    vm.hardware.memory = spin.Size("{{ memory }}")
+{% endif %}
+
+    # Generate a cloud-init data source from the given YAML
+    # For information on cloud-init visit:
+    #   https://cloud-init.io/
+{% if cloud_init is not defined or cloud_init is none %}
+    # vm.cloud_init = pathlib.Path("cloud.yaml")
+    # or you can pass a dictionary following the
+    # cloud-init structure:
+    # vm.cloud_init = { 'users' : ['default'] }
+{% else %}
+    vm.cloud_init = pathlib.Path("{{ cloud_init }}")
+{% endif %}
+
+    # Enable plugins
+    # For instance to auto-generate cloud-init
+{% if not plugins %}
+    # vm.plugins = [spin.plugin.cloud_init]
+{% else %}
+    vm.plugins = [
+{% for plugin in plugins %}
+        {{ plugin }},
+{% endfor %}
+    ]
+{%- endif -%}
+
+
