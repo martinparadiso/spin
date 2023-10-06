@@ -1,5 +1,6 @@
 [tool.poetry]
 name = "spin"
+license = "GPL-2.0-or-later"
 version = "0.1.0-dev0"
 description = "A tool to build, start and stop virtual machines"
 authors = ['Martín Paradiso <martinparadiso@outlook.com>']
