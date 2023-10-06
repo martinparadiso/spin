@@ -42,8 +42,17 @@ autosectionlabel_prefix_document = True
 
 autoclass_content = "both"
 autodoc_member_order = "bysource"
+autodoc_mock_imports = [
+    "guestfs",
+    "libvirt",
+    "tabulate",
+    "pydantic",
+    "xdg",
+    "yaml",
+]
 
 intersphinx_mapping = {"python": ("https://docs.python.org/3.10", None)}
+intersphinx_mapping = {"python": ("https://docs.python.org/3.11", None)}
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

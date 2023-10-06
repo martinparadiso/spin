@@ -47,7 +47,7 @@ jobs:
         run: |
           python -m venv --system-site-packages .env && source .env/bin/activate
           pip install -U poetry
-          poetry install --with docs --without test
+          poetry install --only=docs
       - name: Build docs
         run: |
           source .env/bin/activate

@@ -21,7 +21,8 @@ test-full:
 	coverage run --include="spin/*" --data-file=coverage.pytest.$(PYTHON_VERSION) --include="spin/**/*" -m pytest -rs --super-slow --requires-backend
 
 mypy:							## Run MyPy/static type-checking
-	mypy --install-types --non-interactive spin/ tests/
+	@mkdir -p .mypy_cache/
+	mypy --install-types --non-interactive --cache-dir=.mypy_cache/ spin/ tests/
 
 test-format:						## Validate the formatting
 	black --check spin/ tests/

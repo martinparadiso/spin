@@ -86,9 +86,7 @@ class Settings(BaseSettings):
         load_toml: bool = True
 
         # FIXME: the XDG library will create the path; we do not want that here
-        toml_conf: pathlib.Path = (
-            pathlib.Path(BaseDirectory.save_config_path("spin")) / "conf.toml"
-        )
+        toml_conf: pathlib.Path
 
         @classmethod
         def customise_sources(  # pylint: disable=missing-function-docstring
@@ -97,6 +95,9 @@ class Settings(BaseSettings):
             env_settings,
             file_secret_settings,
         ):
+            cls.toml_conf = (
+                pathlib.Path(BaseDirectory.save_config_path("spin")) / "conf.toml"
+            )
             if not cls.load_toml:
                 return init_settings, env_settings, file_secret_settings
             return init_settings, env_settings, load_from_toml, file_secret_settings
