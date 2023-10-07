@@ -1,6 +1,7 @@
 """Module containing ImageDefinition"""
 from __future__ import annotations
 import dataclasses
+import datetime
 
 import pathlib
 import string
@@ -129,6 +130,9 @@ class Properties:
 
     type: None | Literal["disk-image", "installation-media"] = None
     """Type of the retrieved file: machine disk or .iso install media."""
+
+    origin_time: None | datetime.datetime = None
+    """Build reported by the original author"""
 
 
 class ImageDefinition(BuildTools):

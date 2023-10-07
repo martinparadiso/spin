@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import dataclasses
+import datetime
 import hashlib
 import pathlib
 import shutil
@@ -64,6 +65,7 @@ class Image:
         name: Optional[str]
         tag: Optional[str]
         file: Optional[str]
+        origin_time: Optional[str]
         supports_backing: Optional[bool]
         cloud_init: Optional[bool]
         ignition: Optional[bool]
@@ -85,6 +87,7 @@ class Image:
         name: None | str = None,
         tag: None | str = None,
         file: None | str | pathlib.Path = None,
+        origin_time: None | str | datetime.datetime = None,
         base_image: None | Image | Image.Serialized = None,
         supports_backing: None | bool = None,
         cloud_init: None | bool = None,
@@ -187,6 +190,9 @@ class Image:
             requires_install=requires_install,
             format=_sanitize_format(format),
             type=type,
+            origin_time=datetime.datetime.fromisoformat(origin_time)
+            if isinstance(origin_time, str)
+            else origin_time,
         )
         """Collections of simple properties."""
 
@@ -287,6 +293,9 @@ class Image:
             "name": self.name,
             "tag": self.tag,
             "file": None if not hasattr(self, "file") else str(self.file.absolute()),
+            "origin_time": None
+            if self.props.origin_time is None
+            else self.props.origin_time.isoformat(),
             "supports_backing": self.props.supports_backing,
             "cloud_init": self.props.cloud_init,
             "ignition": self.props.ignition,

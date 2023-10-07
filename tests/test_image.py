@@ -1,4 +1,10 @@
+import pathlib
+from datetime import datetime
+from unittest.mock import MagicMock
+
 import pytest
+
+from spin.image.image import Image
 
 EXPECTED_SCRIPT = {
     "on_creation": [],
@@ -62,6 +68,20 @@ EXPECTED_SCRIPT = {
         {"action": "wait", "time": 0.25},
     ],
 }
+
+
+class TestProperties:
+    def test_origin_time(self, tmp_path: pathlib.Path) -> None:
+        file = tmp_path / "file.img"
+        file.touch()
+        image = Image(file=file)
+        assert "origin_time" in image.dict()
+
+        now = datetime.now()
+        image.props.origin_time = now
+
+        image = Image(**image.dict())
+        assert image.props.origin_time == now
 
 
 class TestImageDefinition:
