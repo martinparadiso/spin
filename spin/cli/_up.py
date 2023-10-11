@@ -7,7 +7,7 @@ from typing import Literal, overload
 
 from spin.build.builder import Builder, ImageDefinition
 from spin.cli._utils import load
-from spin.image.database import LocalDatabase
+from spin.image.database import Database
 from spin.machine.machine import Machine, has_backend, is_created, is_defined
 from spin.machine.processor import MachineProcessor
 from spin.utils import ui
@@ -80,7 +80,7 @@ def up(
     for m in machines_:
         if isinstance(m.image, ImageDefinition):
             if m.image.name is not None:
-                image_db = LocalDatabase()
+                image_db = Database()
                 matching_images = image_db.get((m.image.name, m.image.tag))
                 if len(matching_images) > 0:
                     ui.instance().notice(

@@ -27,7 +27,7 @@ def test_parted_parser() -> None:
     assert len(result) == 6
 
 
-@patch("spin.build.builder.LocalDatabase", autospec=True)
+@patch("spin.build.builder.Database", autospec=True)
 def test_mocked_build(
     db_mock: Mock,
     configured_home: pathlib.Path,
@@ -119,7 +119,7 @@ class TestLocalImage:
 
         assert under_test_cls.accepts(builder) is in_out[1]
 
-    @patch("spin.build.builder.LocalDatabase", autospec=True)
+    @patch("spin.build.builder.Database", autospec=True)
     def test_output(self, db_mock: MagicMock) -> None:
         """Make sure the image is added to the output"""
         retrieve_from = MagicMock(pathlib.Path())
@@ -216,7 +216,7 @@ class TestBaseImage:
         under_test.prepare()
         assert under_test.images == [image_definition]
 
-    @patch("spin.build.builder.LocalDatabase", autospec=True)
+    @patch("spin.build.builder.Database", autospec=True)
     def test_one_base(self, db_mock: MagicMock) -> None:
         image_definition = MagicMock(ImageDefinition())
         base = MagicMock(ImageDefinition(), base=None)
@@ -230,7 +230,7 @@ class TestBaseImage:
 
         db_mock.return_value.get.assert_called_with(image_definition.base)
 
-    @patch("spin.build.builder.LocalDatabase", autospec=True)
+    @patch("spin.build.builder.Database", autospec=True)
     def test_base_with_base(self, db_mock: MagicMock) -> None:
         grandparent = MagicMock(ImageDefinition(), base=None)
         parent = MagicMock(ImageDefinition())
@@ -250,7 +250,7 @@ class TestBaseImage:
         assert under_test.images == [grandparent, parent, image_definition]
         assert db_mock.return_value.get.call_count == 2
 
-    @patch("spin.build.builder.LocalDatabase", autospec=True)
+    @patch("spin.build.builder.Database", autospec=True)
     def test_base_with_existing_base(self, db_mock: MagicMock) -> None:
         grandparent = MagicMock(Image())
         parent = MagicMock(ImageDefinition())

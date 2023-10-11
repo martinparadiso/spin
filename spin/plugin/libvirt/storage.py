@@ -8,8 +8,8 @@ import subprocess
 
 from spin.backend.base import DiskPool, ReturnType
 from spin.errors import TODO, BackendError, NotFound
-from spin.image.database import LocalDatabase
 from spin.image.image import Image
+from spin.image.local_database import LocalDatabase
 from spin.machine.hardware import CDROM, Disk, Storage
 from spin.utils import ui
 from spin.utils.config import conf

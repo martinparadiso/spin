@@ -27,8 +27,8 @@ import spin.backend.base
 import spin.machine.network
 from spin.build.image_definition import ImageDefinition
 from spin.errors import NoBackend
-from spin.image.database import LocalDatabase
 from spin.image.image import Image, ImageReference
+from spin.image.local_database import LocalDatabase
 from spin.machine import core
 from spin.machine.credentials import SSHCredential
 from spin.machine.hardware import CDROM, NIC, Disk, SharedFolder, Storage

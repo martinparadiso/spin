@@ -26,7 +26,7 @@ from spin.machine.machine import Machine
 import spin.utils.info
 import spin.utils.config
 from spin.build.image_definition import ImageDefinition, RemoteImage
-from spin.image.database import LocalDatabase
+from spin.image.database import Database
 from spin.image.image import Image
 from spin.utils.dependency import dep, dependencies
 from spin.utils.sizes import Size
@@ -175,7 +175,7 @@ class SetupBaseImage(BuildStep):
     def process(self, builder: SingleBuilder):
         assert builder.image_definition.base is not None
         assert builder.image is not None
-        search_result = LocalDatabase().get(builder.image_definition.base)
+        search_result = Database().get(builder.image_definition.base)
 
         if search_result is None:
             raise NotFound(f"Base image: {builder.image_definition.base}")
@@ -662,7 +662,7 @@ class SaveImage(BuildStep):
         return builder.store_in_db
 
     def process(self, builder: SingleBuilder):
-        db = LocalDatabase()
+        db = Database()
 
         if builder.image is None:
             return True
@@ -813,7 +813,7 @@ class Builder:
             if image.base is None:
                 return [image]
             base: list[Image | ImageDefinition] | Image | ImageDefinition | None
-            base = LocalDatabase().get(image.base)
+            base = Database().get(image.base)
             if base is None or (isinstance(base, list) and len(base) == 0):
                 raise ValueError(f"Unknown base image: {image.base} for {image}")
             if isinstance(base, list):

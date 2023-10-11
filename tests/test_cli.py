@@ -175,7 +175,7 @@ class TestUp:
             spin.cli.up("", track=False)
         exce_info.match("not found machine")
 
-    @patch("spin.cli._up.LocalDatabase", autospec=True)
+    @patch("spin.cli._up.Database", autospec=True)
     @patch("spin.cli._up.Builder", autospec=True)
     @patch("spin.cli._up.MachineProcessor", autospec=True)
     @patch("spin.cli._up.has_backend", new=lambda *args: True)

@@ -7,7 +7,7 @@ from typing import Optional, Tuple, Union
 from typing_extensions import Protocol, TypeAlias
 
 from spin.build.image_definition import ImageDefinition
-from spin.image.database import LocalDatabase
+from spin.image.database import Database
 from spin.image.image import Image
 from spin.machine.machine import Machine
 from spin.machine.processor import MachineProcessor
@@ -46,7 +46,7 @@ def find_image(image: tuple[str, None | str]) -> Image | ImageDefinition | None:
         A ready to use Image, an ImageDefinition, or None if nothing was
         found.
     """
-    db = LocalDatabase()
+    db = Database()
     name, tag = image
     images = db.get((name, tag))
     if len(images) == 0:

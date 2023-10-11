@@ -7,11 +7,11 @@ from unittest.mock import Mock, PropertyMock, patch
 import pytest
 
 from spin.build.image_definition import ImageDefinition
-from spin.image.database import LocalDatabase
+from spin.image.database import Database
 from spin.image.image import Image
 
 
-class TestLocalDatabase:
+class TestDatabase:
     DATABASE_FOLDER = "image-db"
     NULLIMG_1024_DIGEST = (
         "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
@@ -29,16 +29,14 @@ class TestLocalDatabase:
         self.__class__.dbfile = self.__class__.dbfolder / "images.json"
         self.__class__.dbfile.write_text('{"images": {}}')
 
-    def init(self, db: LocalDatabase) -> None:
-        db.image_folder = self.dbfolder / "images"
-        db.db_file = self.dbfile
+    def init(self, db: Database) -> None:
+        db.local.image_folder = self.dbfolder / "images"
+        db.local.db_file = self.dbfile
 
     def test_add_image(self, tmp_path):
         from pathlib import Path
 
-        from spin import LocalDatabase
-
-        db = LocalDatabase()
+        db = Database()
         self.init(db)
 
         img_file = Path(tmp_path) / "fake_image.img"
@@ -56,9 +54,7 @@ class TestLocalDatabase:
         assert image.file.is_file()
 
     def test_existing_image(self):
-        from spin import LocalDatabase
-
-        db = LocalDatabase()
+        db = Database()
         self.init(db)
 
         images = db.images(local_only=True)
@@ -84,9 +80,7 @@ class TestLocalDatabase:
     def test_add_another_img(self, tmp_path):
         from pathlib import Path
 
-        from spin import LocalDatabase
-
-        db = LocalDatabase()
+        db = Database()
         self.init(db)
 
         image_path = Path(tmp_path) / "fake_image.img"
@@ -105,9 +99,7 @@ class TestLocalDatabase:
         assert image.file.is_file()
 
     def test_existing_images(self):
-        from spin import LocalDatabase
-
-        db = LocalDatabase()
+        db = Database()
         self.init(db)
 
         images = db.images(local_only=True)
@@ -137,8 +129,8 @@ class TestLocalDatabase:
             assert img.name is None
             assert img.tag is None
 
-    @patch("spin.plugin.api.register", autospec=True)
-    @patch("spin.image.database.Image", autospec=True)
+    @patch("spin.image.database.register", autospec=True)
+    @patch("spin.image.local_database.Image", autospec=True)
     def test_return_priority(
         self,
         ImageMock: Mock,
@@ -146,7 +138,6 @@ class TestLocalDatabase:
         tmp_path: pathlib.Path,
     ) -> None:
         """The database must prioritize Images over ImageDefinitions"""
-        ImageDefinitionMock = Mock(ImageDefinition)
 
         def image_generator(*args, **kwargs):
             image = Mock(Image)
@@ -171,12 +162,12 @@ class TestLocalDatabase:
                 }}"""
             )
 
-        with patch("spin.image.database.conf", database_file=tmp_dbfile):
-            imagedb = LocalDatabase()
-            rets = imagedb.get(("name_a", "tag_a"))
-            assert len(imagedb.definitions) == 5
-            assert len(rets) == 2
-            assert rets[0].usable
-            assert not rets[1].usable
-            assert isinstance(rets[0], Image)
-            assert isinstance(rets[1], ImageDefinition)
+        imagedb = Database()
+        imagedb.local.db_file = tmp_dbfile
+        rets = imagedb.get(("name_a", "tag_a"))
+        assert len(imagedb.definitions) == 5
+        assert len(rets) == 2
+        assert rets[0].usable
+        assert not rets[1].usable
+        assert isinstance(rets[0], Image)
+        assert isinstance(rets[1], ImageDefinition)

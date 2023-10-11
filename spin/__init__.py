@@ -82,7 +82,7 @@ atexit.register(exit_procedure)
 
 # Load utilities for spinfiles -------------------------------------------------
 from spin import define
-from spin.image.database import LocalDatabase
+from spin.image.local_database import LocalDatabase
 from spin.machine.credentials import SSHCredential
 from spin.machine.hardware import CDROM, Disk, SharedFolder
 from spin.utils import content
