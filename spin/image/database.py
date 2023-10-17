@@ -3,6 +3,10 @@
 
 from __future__ import annotations
 
+import dataclasses
+import datetime
+from typing import Collection
+
 from typing_extensions import Literal, overload
 
 from spin.build.image_definition import ImageDefinition
@@ -25,6 +29,9 @@ class Database:
         """
         self.local = LocalDatabase()
         self.definitions: list[ImageDefinition] = []
+
+    def _update_providers(self) -> None:
+        """Load plugin-provided images"""
         for prov in register.image_providers:
             self.definitions.extend(prov())
 
@@ -71,7 +78,11 @@ class Database:
     def images(
         self, local_only: bool = False
     ) -> list[Image] | list[Image | ImageDefinition]:
-        """Return a list of the images currently in the local database
+        """Return a list of all images
+
+        Warning:
+            Can be slow; plugins may build image definitions using remote
+            data.
 
         Return:
             The images in the local database. If ``definition_only`` is
@@ -80,6 +91,7 @@ class Database:
         imgs = self.local.images()
         if local_only:
             return imgs
+        self._update_providers()
         return imgs + self.definitions
 
     def _get_by_digest(self, key) -> Image | None:
@@ -104,6 +116,10 @@ class Database:
     ) -> Image | None | list[Image | ImageDefinition]:
         """Return a specific image from the database
 
+        Warning:
+            Can be slow; plugins may build image definitions using remote
+            data.
+
         Args: key: You can pass the image *digest* to find a perfect match, or a
                 name,tag pair to find all images matching that combination.
 
@@ -121,3 +137,41 @@ class Database:
         if len(key) != 2:
             raise ValueError("Key must have exactly 2 elements")
         return self._get_by_nametag(key[0], key[1])
+
+
+@dataclasses.dataclass
+class _BestResult:
+    local: None | Image
+    all: Image | ImageDefinition
+
+
+def best(
+    name: str, tag: str | None, images: Collection[Image | ImageDefinition]
+) -> None | _BestResult:
+    """Select the *best* suited image for the given name-tag pair.
+
+    Locally ready images are preferred over remote ones, newer
+    images are preferred over old ones.
+
+    Return:
+        The best image found
+    """
+
+    def ft_name(image: Image | ImageDefinition) -> bool:
+        return image.name == name and image.tag == tag
+
+    def sort_newer(image: Image | ImageDefinition) -> int:
+        return int(
+            (image.props.origin_time or datetime.datetime.fromtimestamp(0)).timestamp()
+        )
+
+    locals_ = sorted(
+        [i for i in images if isinstance(i, Image) and ft_name(i)], key=sort_newer
+    )
+    all_ = sorted(filter(ft_name, images), key=sort_newer, reverse=True)
+
+    if not all_:
+        return None
+
+    best_local = locals_[0] if locals_ else None
+    return _BestResult(best_local, all_[0])

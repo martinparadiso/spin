@@ -7,7 +7,7 @@ from typing import Optional, Tuple, Union
 from typing_extensions import Protocol, TypeAlias
 
 from spin.build.image_definition import ImageDefinition
-from spin.image.database import Database
+from spin.image.database import Database, best
 from spin.image.image import Image
 from spin.machine.machine import Machine
 from spin.machine.processor import MachineProcessor
@@ -49,11 +49,8 @@ def find_image(image: tuple[str, None | str]) -> Image | ImageDefinition | None:
     db = Database()
     name, tag = image
     images = db.get((name, tag))
-    if len(images) == 0:
-        return None
-    if len(images) > 1:
-        ui.instance().warning(f"Found more than one valid image. Using {images[0]}")
-    return images[0]
+    found = best(name, tag, images)
+    return found.local or found.all if found else None
 
 
 class DefaultLoader(DefinitionLoader):

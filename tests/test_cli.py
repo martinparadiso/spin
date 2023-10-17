@@ -202,9 +202,6 @@ class TestUp:
 
         spin.cli.up("", track=track_switch)
 
-        local_database.return_value.get.assert_called_once_with(
-            (image_def.name, image_def.tag)
-        )
         builder.assert_called_once_with(image_def)
         builder.return_value.build.assert_called_once()
         machine_processor.assert_called_once_with(machine, track=track_switch)

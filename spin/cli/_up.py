@@ -77,21 +77,6 @@ def up(
 
         machines_.extend(found_machine)
 
-    for m in machines_:
-        if isinstance(m.image, ImageDefinition):
-            if m.image.name is not None:
-                image_db = Database()
-                matching_images = image_db.get((m.image.name, m.image.tag))
-                if len(matching_images) > 0:
-                    ui.instance().notice(
-                        f"Found existing image {m.image.name}:{m.image.tag}"
-                    )
-                    if len(matching_images) > 1:
-                        ui.instance().warning(
-                            f"Found matching images: {matching_images}. Using {matching_images[0]}"
-                        )
-                    m.image = matching_images[0]
-
     processors = [MachineProcessor(m, track=track) for m in machines_]
 
     for proc in filter(lambda p: not is_defined(p.machine), processors):

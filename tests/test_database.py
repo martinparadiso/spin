@@ -1,16 +1,22 @@
 """Local database of images"""
 
+import datetime
 import pathlib
 import string
 from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
 
+import spin.image.database
 from spin.build.image_definition import ImageDefinition
 from spin.image.database import Database
 from spin.image.image import Image
 
 
+@patch(
+    "spin.image.database.register",
+    new=Mock(**{"image_providers": []}),
+)
 class TestDatabase:
     DATABASE_FOLDER = "image-db"
     NULLIMG_1024_DIGEST = (
@@ -129,45 +135,100 @@ class TestDatabase:
             assert img.name is None
             assert img.tag is None
 
-    @patch("spin.image.database.register", autospec=True)
-    @patch("spin.image.local_database.Image", autospec=True)
-    def test_return_priority(
-        self,
-        ImageMock: Mock,
-        register_mock: Mock,
-        tmp_path: pathlib.Path,
-    ) -> None:
-        """The database must prioritize Images over ImageDefinitions"""
 
-        def image_generator(*args, **kwargs):
-            image = Mock(Image)
-            image.configure_mock(**kwargs)
-            return image
+@patch("spin.image.database.register", autospec=True)
+@patch("spin.image.local_database.Image", autospec=True)
+def test_return_priority(
+    ImageMock: Mock,
+    register_mock: Mock,
+    tmp_path: pathlib.Path,
+) -> None:
+    """The database must prioritize Images over ImageDefinitions"""
 
-        ImageMock.configure_mock(side_effect=image_generator)
-        register_mock.image_providers = []
-        for i in range(5):
-            imgdef = Mock(ImageDefinition)
-            imgdef.configure_mock(name="name_" + string.ascii_lowercase[i])
-            imgdef.configure_mock(tag="tag_a")
-            imgdef.configure_mock(usable=False)
-            provider = Mock(return_value=[imgdef])
-            register_mock.image_providers.append(provider)
-        tmp_dbfile = tmp_path / "tmp_db"
-        with open(tmp_dbfile, "w", encoding="utf8") as data:
-            data.write(
-                """{"images": {
-                    "a": {"name": "name_a", "tag": "tag_a"}, 
-                    "b": {"name": "name_a", "tag": "tag_b"}
-                }}"""
-            )
+    def image_generator(*args, **kwargs):
+        image = Mock(Image)
+        image.configure_mock(**kwargs)
+        return image
 
-        imagedb = Database()
-        imagedb.local.db_file = tmp_dbfile
-        rets = imagedb.get(("name_a", "tag_a"))
-        assert len(imagedb.definitions) == 5
-        assert len(rets) == 2
-        assert rets[0].usable
-        assert not rets[1].usable
-        assert isinstance(rets[0], Image)
-        assert isinstance(rets[1], ImageDefinition)
+    ImageMock.configure_mock(side_effect=image_generator)
+    register_mock.image_providers = []
+    for i in range(5):
+        imgdef = Mock(ImageDefinition)
+        imgdef.configure_mock(name="name_" + string.ascii_lowercase[i])
+        imgdef.configure_mock(tag="tag_a")
+        imgdef.configure_mock(usable=False)
+        provider = Mock(return_value=[imgdef])
+        register_mock.image_providers.append(provider)
+    tmp_dbfile = tmp_path / "tmp_db"
+    with open(tmp_dbfile, "w", encoding="utf8") as data:
+        data.write(
+            """{"images": {
+                "a": {"name": "name_a", "tag": "tag_a"}, 
+                "b": {"name": "name_a", "tag": "tag_b"}
+            }}"""
+        )
+
+    imagedb = Database()
+    imagedb.local.db_file = tmp_dbfile
+    rets = imagedb.get(("name_a", "tag_a"))
+    assert len(imagedb.definitions) == 5
+    assert len(rets) == 2
+    assert rets[0].usable
+    assert not rets[1].usable
+    assert isinstance(rets[0], Image)
+    assert isinstance(rets[1], ImageDefinition)
+
+
+def test_best_selection() -> None:
+    assert spin.image.database.best("monkey", None, []) is None
+
+    image = Mock(spec=["name", "tag", "usable", "props"])
+    image.configure_mock(
+        **{
+            "name": "monkey",
+            "tag": None,
+            "usable": True,
+            "props.origin_time": None,
+        }
+    )
+    image = Mock(Image())
+    image.configure_mock(
+        **{
+            "name": "monkey",
+            "tag": None,
+            "usable": True,
+            "props.origin_time": None,
+        }
+    )
+    image_def = Mock(ImageDefinition())
+    image_def.configure_mock(
+        **{
+            "name": "monkey",
+            "tag": None,
+            "usable": False,
+            "props.origin_time": datetime.datetime.now(),
+        }
+    )
+    pick_local_ret = spin.image.database.best("monkey", None, [image, image_def])
+    assert pick_local_ret is not None
+    assert pick_local_ret.local == image
+    assert pick_local_ret.all == image_def
+
+    newer = Mock(ImageDefinition())
+    newer.configure_mock(
+        **{
+            "name": "monkey",
+            "tag": None,
+            "usable": False,
+            "props.origin_time": datetime.datetime.now() + datetime.timedelta(days=1),
+        }
+    )
+    pick_local_ret = spin.image.database.best("monkey", None, [image, image_def, newer])
+    assert pick_local_ret is not None
+    assert pick_local_ret.local == image
+    assert pick_local_ret.all == newer
+
+    pick_newer = spin.image.database.best("monkey", None, [image_def, newer])
+    assert pick_newer is not None
+    assert pick_newer.local is None
+    assert pick_newer.all == newer
