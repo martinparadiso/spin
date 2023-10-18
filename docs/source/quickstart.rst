@@ -113,15 +113,19 @@ the following:
     with spin.define.vm('ubuntu', 'jammy') as vm:
         pass
 
-If you execute ``spin up``, a machine will be
-created in the default backend (currently `libvirt`),
-with all the missing details about the VM auto-filled. The
-reason this works is because ``ubuntu:jammy`` is a known
-image embedded into the library. Do not think the tool can
+To create and start the machine, run:
+
+.. code-block:: shell
+
+   spin up
+
+A machine will be created in the default backend (currently 
+`libvirt`), with all the missing details about the VM 
+auto-filled. The reason this works is because ``ubuntu:jammy``
+is a known image embedded into the library. Do not think the tool can
 use any image in the form of ``distro:version``, the
-tool lacks infrastructure and all images are built locally.
-The library supports, at the moment of writing, Debian, Ubuntu, 
-Fedora, and Arch.
+tool has no infrastructure and all images are built locally.
+The library supports, at the moment of writing, Ubuntu and MicroOS.
 
 Starting the VM will create a ``.spin`` folder in
 the same directory, containing metadata and files relevant
@@ -129,15 +133,17 @@ to the machine. Try not to remove this folder, if you do
 so, the library will contain a dangling reference to a
 inexistent machine. 
 
+Since the machine has no configuration, no SSH key has been inserted,
+and Ubuntu has not configured the network. So for now we can only destroy it.
+
 To *safely* destroy a machine, run:
 
 .. code-block:: shell 
 
     spin destroy --storage
 
-
-Customizing the machine
-~~~~~~~~~~~~~~~~~~~~~~~
+Customizing/provisioning the machine
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once you call ``spin init``, or you manually create the ``spinfile``,
 you can edit the characteristics of the machine using the following
@@ -155,6 +161,46 @@ common operations are described below.
     
     **Do not** store private keys, password, tokens or any kind 
     of credentials in the ``spinfile`` or shell script.
+
+
+As of right now the easiest way to automatically *provision* 
+a machine for development is to use the cloud-init plugin:
+
+.. literalinclude:: _static/examples/cloud_init.py
+   :language: python
+
+The plugin will use ``cloud-init`` to provision the machine
+with the default values, such as a default insecure key. Also,
+the `cloud-init` service inside the machine will create users,
+setup network, and perform all the necessary machine configurations
+such as expanding the file system.
+
+Connecting to the machine
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To connect to a machine, the library provides a wrapper around
+`ssh` to determine the target hostname and private key:
+
+.. code-block:: shell
+
+   spin ssh <machine name or UUID>
+
+If you are standing in a directory containing a `.spin` folder,
+you can SSH easily into the machine(s) defined there by using:
+
+.. code-block:: shell
+
+   spin ssh
+
+You can pass commands to execute --and pipe stdin-- just like
+a regular ssh command, to automatically determine the target
+use `-` after ssh:
+
+.. code-block:: shell
+
+   # For instance to reboot the guest machine found in this
+   # directory:
+   spin ssh - sudo reboot
 
 
 Running custom commands
