@@ -28,10 +28,34 @@ spin.machine.core module
    :undoc-members:
    :show-inheritance:
 
+spin.machine.creation\_steps module
+-----------------------------------
+
+.. automodule:: spin.machine.creation_steps
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 spin.machine.credentials module
 -------------------------------
 
 .. automodule:: spin.machine.credentials
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spin.machine.definition\_steps module
+-------------------------------------
+
+.. automodule:: spin.machine.definition_steps
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spin.machine.destruction\_steps module
+--------------------------------------
+
+.. automodule:: spin.machine.destruction_steps
    :members:
    :undoc-members:
    :show-inheritance:

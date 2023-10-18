@@ -21,6 +21,14 @@ spin.plugin.cloud\_init module
    :undoc-members:
    :show-inheritance:
 
+spin.plugin.ignition module
+---------------------------
+
+.. automodule:: spin.plugin.ignition
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 spin.plugin.images module
 -------------------------
 

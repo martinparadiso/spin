@@ -28,6 +28,14 @@ spin.image.image module
    :undoc-members:
    :show-inheritance:
 
+spin.image.local\_database module
+---------------------------------
+
+.. automodule:: spin.image.local_database
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
