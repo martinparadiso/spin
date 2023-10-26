@@ -214,10 +214,7 @@ def run(args: Sequence[str] | None = None) -> None:
     level = get_args(spin.utils.ui.LEVEL_LITERAL)[
         ui.NOTICE - min(arguments.verbose, ui.NOTICE)
     ]
-    spin.utils.init_ui(
-        arguments.ui,
-        level,
-    )
+    spin.utils.init_ui(arguments.ui, level, arguments.verbose != 0)
 
     if arguments.version:
         print(f"spin {pkg_resources.get_distribution('spin').version}")

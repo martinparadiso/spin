@@ -77,8 +77,6 @@ class LogUI(ui.UI):
             self.print(*values, level=level)
 
     def guest(self, guest_name: str, *values: Any) -> None:
-        if self.level > ui.DEBUG:
-            return
         self.print(f" [{guest_name}]", *values)
 
     T = TypeVar("T")

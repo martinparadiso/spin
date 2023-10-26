@@ -330,7 +330,7 @@ class FancyUI(ui.UI):
 
     def guest(self, guest_name: str, *values: Any) -> None:
         if not str(values[-1]).endswith("\n"):
-            values = (*values, "↵")
+            values = (*values, "↵\n")
         self.print(
             self.formatter.gray(guest_name + self.formatter.strong(" │")),
             *values,

@@ -36,11 +36,13 @@ def content(file: pathlib.Path | str, encoding: str = "utf8") -> str:
 
 def init_ui(
     mode: Literal["log", "fancy", "auto"] = "auto",
-    verbosity_level: int = ui.WARNING,
+    print_level: int = ui.WARNING,
+    verbose: bool = False,
 ) -> None:
     """Return the best suited UI for the current invocation"""
 
     if mode == "fancy" or (mode == "auto" and _ui_fancy.FancyUI.check_env()):
-        ui.instance(_ui_fancy.FancyUI(verbosity_level))
+        ui.instance(_ui_fancy.FancyUI(print_level))
     else:
-        ui.instance(_ui_log.LogUI(verbosity_level))
+        ui.instance(_ui_log.LogUI(print_level))
+    ui.instance().verbose = verbose
