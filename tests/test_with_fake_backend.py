@@ -12,6 +12,7 @@ import utils
 
 import spin.cli._status
 from spin.machine.tracker import Tracker
+from spin.utils import ui
 
 
 @pytest.mark.super_slow
@@ -92,8 +93,10 @@ def test_minimal_with_exception_in_step(
     assert len(status) == 1
     assert status[0].ip is None
     assert status[0].state == "DEFINED"
-    assert len(list((folder / ".spin" / status[0].machine.uuid).iterdir())) == 0
+    if (folder / ".spin" / status[0].machine.uuid).exists():
+        assert len(list((folder / ".spin" / status[0].machine.uuid).iterdir())) == 0
 
+    # TODO: Check if machines.json file is empty
     spin.cli.print_status(folder)
 
     machine = status[0].machine
@@ -103,7 +106,7 @@ def test_minimal_with_exception_in_step(
     tracker = Tracker()
     assert len(tracker.list_machines()) == 0
     found = tracker.find(uuid=machine.uuid)
-    assert found == machine
+    assert found is None
 
 
 @pytest.mark.super_slow

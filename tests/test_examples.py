@@ -35,8 +35,7 @@ def test_example(
     configured_home: pathlib.Path,
     test_proxy: None | str,
 ) -> None:
-    spin.cli._down.TIMEOUT = 5
-    spin.machine.start_steps.WaitForNetwork.timeout = 45
+    spin.utils.ui.instance().verbose = True
     assert file.exists()
     shutil.copy(file, cwd_to_tmp / "spinfile.py")
     assert file.parent.parent.parent.name == "tests"
@@ -58,6 +57,8 @@ def test_example(
         assert has_backend(vm)
         assert vm.hardware.network.network.name is not None
         assert vm.backend.main.network.get(vm.hardware.network.network.name) is None
+
+    spin.utils.ui.instance().verbose = False
 
 
 @patch("spin.cli._utils.Tracker", autospec=True)
