@@ -11,7 +11,7 @@ from spin.backend.base import Backend
 from spin.build.image_definition import ImageDefinition
 from spin.machine.hardware import Disk
 from spin.machine.machine import Machine
-from spin.machine.steps import BaseTask, CommonStep, CreationStep, ProcessableStep
+from spin.machine.steps import CreationTask, CommonStep, CreationStep, ProcessableStep
 from spin.utils import dependency
 from spin.utils.dependency import Dependencies, dep
 
@@ -232,9 +232,9 @@ solves = dependency.solves
 
 
 def creation_step(
-    requires: None | Collection[Type[BaseTask] | Type[CreationStep]] = None,
-    after: None | Collection[Type[BaseTask] | Type[CreationStep]] = None,
-    before: None | Collection[Type[BaseTask] | Type[CreationStep]] = None,
+    requires: None | Collection[Type[CreationTask] | Type[CreationStep]] = None,
+    after: None | Collection[Type[CreationTask] | Type[CreationStep]] = None,
+    before: None | Collection[Type[CreationTask] | Type[CreationStep]] = None,
 ):
     requires = requires or []
     after = after or []

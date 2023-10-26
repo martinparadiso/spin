@@ -544,7 +544,7 @@ def test_simple_task() -> None:
     new_machine_name = Mock()
 
     @dataclasses.dataclass
-    class TestTask(spin.machine.steps.BaseTask):
+    class TestTask(spin.machine.steps.CreationTask):
         """Simple dataclass to test typing"""
 
         a: int

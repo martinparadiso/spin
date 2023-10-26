@@ -9,6 +9,7 @@ from typing import (
     Callable,
     Collection,
     Dict,
+    Generic,
     Iterable,
     List,
     NamedTuple,
@@ -23,7 +24,7 @@ from typing import (
 
 from typing_extensions import TypeGuard
 
-from spin.machine.steps import BaseTask, CreationStep
+from spin.machine.steps import CreationStep, CreationTask, StartStep, StartTask
 
 Dependencies = Optional[Union[type, str, Set[Union[type, str]]]]
 """Supported values when defining a class-based dependency graph.
@@ -377,22 +378,40 @@ def dep(
     return decorator_dep(c)
 
 
-_BT = BaseTask
+_BT = CreationTask
 _CS = CreationStep
+
+_ST = StartTask
+_SS = StartStep
+
+Step = TypeVar("Step")
+Task = TypeVar("Task")
+
+
+@dataclasses.dataclass
+class _GraphRet(Generic[Step, Task]):
+    requirements: dict[Type[Step], list[Type[Step]]]
+    task_assignment: dict[Type[Step], list[Task]]
+
+
+@dataclasses.dataclass
+class _StepData(Generic[Step, Task]):
+    requires: list[Type[Task] | Type[Step]] = dataclasses.field(default_factory=list)
+    after: list[Type[Task] | Type[Step]] = dataclasses.field(default_factory=list)
+    provides: list[Type[Task]] = dataclasses.field(default_factory=list)
+    before: list[Type[Task] | Type[Step]] = dataclasses.field(default_factory=list)
+
+
+_CreationStepData = _StepData[CreationStep, CreationTask]
+_StartStepData = _StepData[StartStep, StartTask]
 
 
 class RegisterPool:
-    @dataclasses.dataclass
-    class _CreationStep:
-        requires: list[Type[_BT] | Type[_CS]] = dataclasses.field(default_factory=list)
-        after: list[Type[_BT] | Type[_CS]] = dataclasses.field(default_factory=list)
-        provides: list[Type[_BT]] = dataclasses.field(default_factory=list)
-        before: list[Type[_BT] | Type[_CS]] = dataclasses.field(default_factory=list)
-
     def __init__(self) -> None:
-        self.creation_steps: dict[Type[CreationStep], RegisterPool._CreationStep] = {}
+        self.creation_steps: dict[Type[CreationStep], _CreationStepData] = {}
+        self.start_steps: dict[Type[StartStep], _StartStepData] = {}
 
-    def solves(self, *tasks: Type[BaseTask]):
+    def solves(self, *tasks: Type[CreationTask]):
         """Register a Creation Step.
 
         Args:
@@ -411,9 +430,9 @@ class RegisterPool:
     def register(
         self,
         *,
-        requires: None | Collection[Type[BaseTask] | Type[CreationStep]] = None,
-        after: None | Collection[Type[BaseTask] | Type[CreationStep]] = None,
-        before: None | Collection[Type[BaseTask] | Type[CreationStep]] = None,
+        requires: None | Collection[Type[CreationTask] | Type[CreationStep]] = None,
+        after: None | Collection[Type[CreationTask] | Type[CreationStep]] = None,
+        before: None | Collection[Type[CreationTask] | Type[CreationStep]] = None,
     ):
         """Register a Creation Step.
 
@@ -426,7 +445,6 @@ class RegisterPool:
                 Essentially defines a 'soft' dependency; where the step
                 does not fail if the steps and tasks are not present in
                 the final creation procedure.
-            provides: Collection of  `Tasks` this step resolves.
             before: Collection of `CreationStep` and/or `Tasks` to execute
                 after this step. Useful for inserting the step in the middle
                 of an existing pipeline.
@@ -438,41 +456,43 @@ class RegisterPool:
 
         def _register_inner(step: Type[_T]) -> Type[_T]:
             """Register a creation step"""
-            self.creation_steps[step] = RegisterPool._CreationStep(
+            self.creation_steps[step] = _CreationStepData(
                 list(requires), list(after), [], list(before)
             )
             return step
 
         return _register_inner
 
-    class _HelpRet(NamedTuple):
-        requirements: dict[Type[CreationStep], list[Type[CreationStep]]]
-        task_assignment: dict[Type[CreationStep], list[BaseTask]]
-
-    def _creation_graph(
+    def _dependency_graph(
         self,
-        tasks: Collection[BaseTask],
-        select: Callable[
-            [Collection[Type[CreationStep]], BaseTask], Type[CreationStep]
-        ],
-    ) -> _HelpRet:
+        tasks: Collection[Task],
+        select: Callable[[Collection[Type[Step]], Task], Type[Step]],
+        step_data: dict[Type[Step], _StepData[Step, Task]],
+        base_task_type: Type[Task],
+        extra_steps: None | Collection[Type[Step]] = None,
+    ) -> _GraphRet[Step, Task]:
+        """Generate a *graph* of step dependencies.
+
+        Args:
+
+        """
         # FIXME: We are not 'cascading' task dependencies:
         # If task A requires task B, but task B is not explicitly added
         # as a dependency, it is never added; and the resolution fails.
         # Furthermore, it fails in the wrong place, when we call as_step
         # it tries to find the step solving B.
 
-        all_providers_for_each_task: dict[BaseTask, list[Type[CreationStep]]] = {
+        all_providers_for_each_task: dict[Task, list[Type[Step]]] = {
             task: [] for task in tasks
         }
         for task in tasks:
             for step, provides in map(
-                lambda s: (s[0], s[1].provides), self.creation_steps.items()
+                lambda s: (s[0], s[1].provides), step_data.items()
             ):
                 if type(task) in provides:
                     all_providers_for_each_task[task].append(step)
 
-        def select_provider(provs, task_t) -> Type[CreationStep]:
+        def select_provider(provs, task_t) -> Type[Step]:
             provs = [prov for prov in provs if prov.confidence(task_t) is not False]
             if len(provs) == 0:
                 raise ValueError(f"No provider for task {task_t}")
@@ -483,8 +503,10 @@ class RegisterPool:
             for task, provs in all_providers_for_each_task.items()
         }
 
-        def as_step(__t: Type[BaseTask] | Type[CreationStep]) -> Type[CreationStep]:
-            if issubclass(__t, BaseTask):
+        def as_step(__t: Type[Task] | Type[Step]) -> Type[Step]:
+            # NOTE: We extract the 'type' from *tasks* because Task can
+            # only be used in 'type' context
+            if issubclass(__t, base_task_type):
                 if __t not in {type(task) for task in providers}:
                     # TODO: Store the dependencies so we can properly notify
                     # the user about who's requesting __t.
@@ -496,12 +518,11 @@ class RegisterPool:
                     if isinstance(task, __t):
                         return provider
                 raise ValueError(f"Task {__t}  has no provider")
-            return __t
+            # NOTE: We need to cast it due to limitations in type system
+            return __t  # type: ignore
 
-        nodes = {*providers.values()}
-        steps = {
-            step: data for step, data in self.creation_steps.items() if step in nodes
-        }
+        nodes = {*providers.values(), *(extra_steps or [])}
+        steps = {step: data for step, data in step_data.items() if step in nodes}
 
         relations = set(
             (a, as_step(c))
@@ -522,24 +543,22 @@ class RegisterPool:
         )
         relations.update((node, req) for (node, req) in _soft_deps if req in nodes)
 
-        d: dict[Type[CreationStep], list[Type[CreationStep]]] = {n: [] for n in nodes}
+        d: dict[Type[Step], list[Type[Step]]] = {n: [] for n in nodes}
         for node, requires in relations:
             d[node].append(requires)
 
-        provides_: dict[Type[CreationStep], list[BaseTask]] = {
-            step_type: [] for step_type in d
-        }
+        provides_: dict[Type[Step], list[Task]] = {step_type: [] for step_type in d}
         for task, provided_by in providers.items():
             provides_[provided_by].append(task)
-        return RegisterPool._HelpRet(d, provides_)
+        return _GraphRet(d, {k: v for k, v in provides_.items() if v})
 
     def creation_pipeline(
         self,
-        tasks: Collection[BaseTask],
+        tasks: Collection[CreationTask],
         select: Callable[
-            [Collection[Type[CreationStep]], BaseTask], Type[CreationStep]
+            [Collection[Type[CreationStep]], CreationTask], Type[CreationStep]
         ],
-    ) -> tuple[list[Type[CreationStep]], dict[Type[CreationStep], list[BaseTask]]]:
+    ) -> tuple[list[Type[CreationStep]], dict[Type[CreationStep], list[CreationTask]]]:
         """Generate the sequence of steps to create a Machine.
 
         Args:
@@ -549,12 +568,85 @@ class RegisterPool:
             select: Function used to find the most capable task.
         """
 
-        relations, task_resolvers = self._creation_graph(tasks, select)
+        _ret = self._dependency_graph(
+            tasks,
+            select,
+            self.creation_steps,
+            CreationTask,
+        )
+        relations, task_resolvers = _ret.requirements, _ret.task_assignment
         nodes = set(relations.keys())
         visited: set[Type[CreationStep]] = set()
         ret: list[Type[CreationStep]] = []
 
         def start_from(node: Type[CreationStep]) -> None:
+            node_requires = relations[node]
+            visited.add(node)
+            for requirement in node_requires:
+                if requirement not in nodes:
+                    raise ValueError(f"{requirement} required by {node} not available")
+                if requirement not in visited:
+                    start_from(requirement)
+            ret.append(node)
+
+        while visited < nodes:
+            start_from((nodes - visited).pop())
+
+        return ret, task_resolvers
+
+    def start_step(
+        self,
+        *,
+        solves: None | Collection[Type[StartTask]] = None,
+        requires: None | Collection[Type[StartTask] | Type[StartStep]] = None,
+        after: None | Collection[Type[StartTask] | Type[StartStep]] = None,
+        before: None | Collection[Type[StartTask] | Type[StartStep]] = None,
+    ):
+        """Register a start step"""
+
+        S = TypeVar("S", bound=Type[StartStep])
+
+        def _wrapper(step: S) -> S:
+            self.start_steps[step] = _StartStepData(
+                requires=list(requires or []),
+                after=list(after or []),
+                provides=list(solves or []),
+                before=list(before or []),
+            )
+            return step
+
+        return _wrapper
+
+    def start_pipeline(
+        self,
+        tasks: Collection[StartTask],
+        select: Callable[[Collection[Type[StartStep]], StartTask], Type[StartStep]],
+        step_accept: Callable[[Type[StartStep]], bool],
+    ) -> tuple[list[Type[StartStep]], dict[Type[StartStep], list[StartTask]]]:
+        """Generate the sequence of steps to create a Machine.
+
+        Args:
+            tasks: Extra tasks to add to the requirements.
+            condition: A callable which accepts any StartStep, and
+                returns `True` if the step is should be used.
+            select: Function used to find the most capable task.
+        """
+
+        non_tasksolver_steps = [s for s in self.start_steps if step_accept(s)]
+
+        _ret = self._dependency_graph(
+            tasks,
+            select,
+            self.start_steps,
+            StartTask,
+            non_tasksolver_steps,
+        )
+        relations, task_resolvers = _ret.requirements, _ret.task_assignment
+        nodes = set(relations.keys())
+        visited: set[Type[StartStep]] = set()
+        ret: list[Type[StartStep]] = []
+
+        def start_from(node: Type[StartStep]) -> None:
             node_requires = relations[node]
             visited.add(node)
             for requirement in node_requires:

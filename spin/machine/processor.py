@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 from spin.errors import Bug, UnresolvedTasks
 from spin.machine.steps import (
-    BaseTask,
+    CreationTask,
     CreationStep,
     DefinitionStep,
     DestructionStep,
@@ -62,7 +62,7 @@ class MachineProcessor:
 
         self.dry_run: bool = False
 
-        self.tasks: list[BaseTask] = []
+        self.tasks: list[CreationTask] = []
         """Collection of tasks to fulfill"""
 
         warnings.warn("track not implemented")
@@ -91,9 +91,9 @@ class MachineProcessor:
 
         DefinitionStep.group = old_group
 
-    def _generate_tasks(self) -> list[BaseTask]:
+    def _generate_tasks(self) -> list[CreationTask]:
         assert is_under_creation(self.machine)
-        ret: list[BaseTask] = [
+        ret: list[CreationTask] = [
             *self.tasks,
             creation_steps.OS(self.machine),
             creation_steps.Network(self.machine),
@@ -180,7 +180,7 @@ class MachineProcessor:
 
             if not is_under_creation(self.machine):
                 raise Bug("Machine is not ready for construction")
-            tasks: list[BaseTask] = self._generate_tasks()
+            tasks: list[CreationTask] = self._generate_tasks()
 
             steps, tasks_assignment = pool.creation_pipeline(
                 tasks,

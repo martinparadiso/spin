@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Generic, Literal, Protocol, TypeVar
 
 from spin.machine.machine import (
     CreatedMachine,
@@ -84,7 +84,7 @@ class DefinitionStep(ProcessableStep):
     group: None | Group = None
     """Group where the machine should be stored."""
 
-    def __init__(self, machine: Machine, tasks: list[BaseTask]) -> None:
+    def __init__(self, machine: Machine, tasks: list[CreationTask]) -> None:
         super().__init__()
         self.machine: Machine = machine
         self.tasks = tasks
@@ -103,7 +103,7 @@ class DefinitionStep(ProcessableStep):
         raise NotImplementedError(f"{cls.__name__}")
 
 
-class BaseTask:
+class CreationTask:
     """Common base class for all creation tasks."""
 
     def __init__(self, machine: Machine | MachineUnderCreation) -> None:
@@ -111,6 +111,46 @@ class BaseTask:
         #  tasks during definition
         self.machine: MachineUnderCreation = machine  # type: ignore
         """`Machine` the task belongs to."""
+
+
+class StartTask:
+    """Common base class for all start tasks."""
+
+    def __init__(self, machine: Machine | CreatedMachine) -> None:
+        # HACK: Fix this typing error; we need to accept machine to insert
+        #  tasks during definition
+        self.machine: MachineUnderCreation = machine  # type: ignore
+        """`Machine` the task belongs to."""
+
+
+_T = TypeVar("_T", contravariant=True)
+
+
+class Solves(Protocol[_T]):
+    @classmethod
+    def confidence(cls, task: _T) -> int | Literal[False]:
+        """Specify the *level* of confidence to fulfill the task on the given machine.
+
+        If the task cannot be solved by this step, returns `False`.
+
+        Args:
+            task: The task to fulfill, contains the machine related
+                to it.
+
+        Return:
+            The level of 'confidence'; used for tie-breaking. `0` means neutral, higher
+            values mean 'more confidence', negative values are 'use if no other method
+            is available'. `False` means the step cannot solve the given task.
+        """
+        ...
+
+    def solve(self, task: _T) -> None:
+        """Solve the task.
+
+        Raises:
+            Any exception the implementer considers approppiate.
+        """
+        ...
 
 
 class CreationStep(CommonStep):
@@ -127,7 +167,7 @@ class CreationStep(CommonStep):
 
     @classmethod
     @abstractmethod
-    def confidence(cls, task: BaseTask) -> int | Literal[False]:
+    def confidence(cls, task: CreationTask) -> int | Literal[False]:
         """Specify the *level* of confidence to fulfill the task on the given machine.
 
         If the task cannot be solved by this step, returns `False`.

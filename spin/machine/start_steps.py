@@ -11,7 +11,7 @@ from spin.errors import BackendError, CommandFailed
 from spin.locks import process_stop
 from spin.machine.connection import print_console, ssh
 from spin.machine.machine import CreatedMachine, DefinedMachine, Log, as_machine
-from spin.machine.steps import StartStep
+from spin.machine.steps import CreationTask, StartStep
 from spin.utils.dependency import dep
 from spin.utils.load import Spinfolder
 

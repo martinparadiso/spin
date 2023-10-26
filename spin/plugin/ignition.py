@@ -19,12 +19,12 @@ from spin.machine.creation_steps import ExtraStorage, InsertSSHCredential
 from spin.machine.definition_steps import GenerateKeys
 from spin.machine.hardware import CDROM
 from spin.machine.machine import DefinedMachine, Machine, as_machine
-from spin.machine.steps import BaseTask, CreationStep, DefinitionStep
+from spin.machine.steps import CreationStep, CreationTask, DefinitionStep
 from spin.utils import ui
 from spin.utils.load import Spinfolder
 
 
-class IgnitionDatasourceDisk(BaseTask):
+class IgnitionDatasourceDisk(CreationTask):
     """Generate the ignition datasource for the given machine"""
 
 
@@ -121,7 +121,9 @@ class AddSSHKeyToIgnition(CreationStep):
     name = "Inserting SSH keys into Ignition data"
 
     @classmethod
-    def confidence(cls, task: BaseTask | InsertSSHCredential) -> Literal[False] | int:
+    def confidence(
+        cls, task: CreationTask | InsertSSHCredential
+    ) -> Literal[False] | int:
         if task.machine.ignition is None:
             return False
         return 10

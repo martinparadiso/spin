@@ -18,7 +18,7 @@ from spin.image.image import Image
 from spin.machine.credentials import SSHCredential
 from spin.machine.hardware import CDROM, Disk, SharedFolder
 from spin.machine.machine import DefinedMachine, MachineUnderCreation, as_machine
-from spin.machine.steps import BaseTask, CreationStep
+from spin.machine.steps import CreationTask, CreationStep
 from spin.machine.tracker import Tracker
 from spin.utils import cloud_init, fileparse, ui
 from spin.utils.config import conf
@@ -28,8 +28,8 @@ from spin.utils.info import can_write
 from spin.utils.load import Spinfolder
 
 
-def _mk_task(name: str, doc: str) -> Type[BaseTask]:
-    new_class = type(name, (BaseTask,), {"__doc__": doc})
+def _mk_task(name: str, doc: str) -> Type[CreationTask]:
+    new_class = type(name, (CreationTask,), {"__doc__": doc})
     return new_class
 
 
@@ -48,7 +48,7 @@ CloudInitKeyExtraction = _mk_task(
 StoreInTracker = _mk_task("StoreInTracker", "Store the machine in tracker")
 
 
-class InsertSSHCredential(BaseTask):
+class InsertSSHCredential(CreationTask):
     """Insert the corresponding SSH credential into the machine"""
 
     def __init__(self, credential: SSHCredential, machine) -> None:
@@ -738,9 +738,9 @@ class StoreInTrackerStep(CreationStep):
     name = "Storing machine in register"
 
     @classmethod
-    def confidence(cls, task: BaseTask):
+    def confidence(cls, task: CreationTask):
         return 0
 
-    def solve(self, task: BaseTask) -> None:
+    def solve(self, task: CreationTask) -> None:
         tracker = Tracker()
         tracker.add(as_machine(task.machine))
