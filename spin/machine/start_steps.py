@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import subprocess
 from threading import Event, Thread
 
@@ -50,20 +51,20 @@ class WaitForNetwork(StartStep):
 
     def process(self) -> None:
         wait_exit = Event()
+        spin.locks.global_wakeups.add(wait_exit)
 
-        def wait_for_ip():
-            try:
-                while not process_stop.is_set() and not wait_exit.is_set():
-                    if self.machine.backend.main_ip is not None:
-                        return
-                    wait_exit.wait(0.05)
-            finally:
-                wait_exit.set()
+        start_time = dt.datetime.now()
 
-        polling_thread = Thread(target=wait_for_ip, name="polling-machine-ip")
-        polling_thread.start()
-        wait_exit.wait(self.timeout)
-        wait_exit.set()
+        def time_elapsed():
+            return (dt.datetime.now() - start_time) > dt.timedelta(seconds=self.timeout)
+
+        try:
+            while not wait_exit.is_set() and not time_elapsed():
+                if self.machine.backend.main_ip is not None:
+                    return
+                wait_exit.wait(0.05)
+        finally:
+            spin.locks.global_wakeups.remove(wait_exit)
         if self.machine.backend.main_ip is None:
             raise BackendError(f"No IP found after {self.timeout} seconds")
 
@@ -73,7 +74,7 @@ class WaitForSSH(StartStep):
     """Wait until SSH is available"""
 
     name = "Waiting for SSH"
-    timeout = 60
+    timeout = 240
 
     @classmethod
     def accepts(cls, machine: DefinedMachine) -> bool:
@@ -86,32 +87,28 @@ class WaitForSSH(StartStep):
     def process(self) -> None:
         assert self.machine.backend.main_ip is not None
         wait_exit = Event()
+        spin.locks.global_wakeups.add(wait_exit)
         attempts = 0
+        start_time = dt.datetime.now()
 
         def port_open() -> bool:
-            ret = subprocess.run(
-                # TODO: read port from SSH config
-                ["nc", "-vzw1", str(self.machine.backend.main_ip), "22"],
-                check=False,
-                capture_output=True,
-            )
+            ret = ssh(self.machine, "exit")
             return ret.returncode == 0
 
-        def wait_for_ssh():
-            nonlocal attempts
-            try:
-                while not process_stop.is_set() and not wait_exit.is_set():
-                    attempts += 1
-                    if port_open():
-                        return
-                    wait_exit.wait(0.1)
-            finally:
-                wait_exit.set()
+        def time_elapsed():
+            return (dt.datetime.now() - start_time) > dt.timedelta(seconds=self.timeout)
 
-        polling_thread = Thread(target=wait_for_ssh, name="polling-machine-ssh")
-        polling_thread.start()
-        wait_exit.wait(self.timeout)
-        wait_exit.set()
+        try:
+            while not wait_exit.is_set() and not time_elapsed():
+                attempts += 1
+                if port_open():
+                    return
+                # Limit to one attempt every 3 seconds
+                wait_exit.wait(3)
+        finally:
+            spin.locks.global_wakeups.remove(wait_exit)
+            wait_exit.set()
+
         if not port_open():
             raise BackendError(
                 f"No SSH server found after {self.timeout} seconds. "

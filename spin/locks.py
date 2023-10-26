@@ -18,6 +18,14 @@ The variable *must* be used by all threads, tasks and concurrent
 execution functions to avoid handling resources.
 """
 
+global_wakeups: set[Event] = set()
+"""Collection of Events that need waking up in case of emergency.
+
+For instance: a thread is reading from a console port/tty file, and
+the user sends CTRL-C/SIGINT; the thread *must* leave an Event in this
+pool to wake him up to signal the end of the processing.
+"""
+
 
 def signal_stop(signum=None, frame=None) -> None:
     """Upon call, :py:attr:`process_stop` is set.
@@ -25,6 +33,8 @@ def signal_stop(signum=None, frame=None) -> None:
     This function can be used to stop all threads of execution upon failure.
     """
     process_stop.set()
+    for wakeup in global_wakeups:
+        wakeup.set()
 
 
 for s in [signal.SIGINT]:

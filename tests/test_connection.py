@@ -29,11 +29,9 @@ from spin.machine.machine import Machine
 class TestSerialPort:
     """Test stream process functionality"""
 
-    @patch("spin.locks.process_stop", autospec=True)
     @pytest.mark.slow
-    def test_simple(self, ps_mock: Mock):
+    def test_simple(self):
         """Test serial port connection works"""
-        ps_mock.is_set.return_value = False
 
         MESSAGES = [b"FIRST_MSG", b"SECOND_MSG"]
 
@@ -169,11 +167,9 @@ class TestPrintConsole:
         sp_mock.open.assert_called_once()
         sp_mock.close.assert_called_once()
 
-    @patch("spin.locks.process_stop", autospec=True)
     @patch("spin.machine.connection.ui", autospec=True)
-    def test_real_threads(self, ui_mock: Mock, pss_mock: Mock) -> None:
+    def test_real_threads(self, ui_mock: Mock) -> None:
         machine = MagicMock(Machine())
-        pss_mock.is_set.return_value = False
         handle = print_console(machine)
         assert handle.thread.is_alive()
         handle.close()

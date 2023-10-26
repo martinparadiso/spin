@@ -449,9 +449,7 @@ class SerialPortConnection:
         """Create a reader thread, stores stuff in _readbuffer."""
 
         def read() -> None:
-            while (
-                not self._reader_event.is_set() and not spin.locks.process_stop.is_set()
-            ):
+            while not self._reader_event.is_set():
                 try:
                     buf = self.conn.read(4096)
                     if len(buf) == 0:
@@ -479,6 +477,7 @@ class SerialPortConnection:
         """Open the serial port to the machine"""
         with self._lock:
             self.conn.open()
+            spin.locks.global_wakeups.add(self._reader_event)
             self._spawn_reader()
             self._is_open = True
 
@@ -511,6 +510,7 @@ class SerialPortConnection:
             self.conn.close()
             self._reader_event.clear()
             self._is_open = False
+            spin.locks.global_wakeups.remove(self._reader_event)
             return True
 
     def buffersize(self) -> int:
@@ -1274,6 +1274,7 @@ class _Handle:
         self.machine_name = machine_name
 
         self.stop_event = Event()
+        spin.locks.global_wakeups.add(self.stop_event)
         self.thread = Thread(
             target=self._print, name=f"Printing console from {machine_name}"
         )
@@ -1281,7 +1282,7 @@ class _Handle:
 
     def _print(self) -> None:
         loggifier = term.Loggifier()
-        while not spin.locks.process_stop.is_set() and not self.stop_event.is_set():
+        while not self.stop_event.is_set():
             buf = self.port.read(-1)
             if buf is None:
                 return
@@ -1297,6 +1298,7 @@ class _Handle:
         self.stop_event.set()
         self.port.close()
         self.thread.join(timeout=10)
+        spin.locks.global_wakeups.remove(self.stop_event)
 
 
 def print_console(machine: "Machine") -> _Handle:

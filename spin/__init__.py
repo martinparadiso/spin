@@ -61,7 +61,8 @@ def exit_procedure() -> None:
     spin.exit_procedure_called = True
     ui = spin.utils.ui.instance()
 
-    spin.locks.process_stop.set()
+    for wakeups in spin.locks.global_wakeups:
+        wakeups.set()
 
     for cb in spin.locks.exit_callbacks:
         cb()
