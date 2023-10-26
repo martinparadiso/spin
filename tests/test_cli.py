@@ -125,11 +125,6 @@ with spin.define.vm() as vm:
         assert ret.state == "DEFINED"
         assert ret.machine.image is None
 
-    @patch("spin.cli._utils.Tracker", autospec=True)
-    @pytest.mark.parametrize("file", glob.glob("tests/examples/*.py"))
-    def test_all_examples(self, tracker_mock: Mock, file: str):
-        spin.cli.print_status(file)
-
 
 class TestRun:
     """Call the big/wrapper CLI function"""

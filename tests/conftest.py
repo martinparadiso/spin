@@ -129,3 +129,23 @@ def configured_home(tmp_path: pathlib.Path):
     spin.utils.config.conf.init_conf()
 
     yield tmp_path
+
+
+def python_examples(spinfile_only: bool):
+    _files = [
+        # File, spinfile
+        ("cloud_init.py", True),
+        ("command_on_creation.py", True),
+        ("minimal.py", True),
+        ("microos.py", False),
+        ("multiple_vms.py", True),
+        ("port_forward.py", True),
+        ("ssh.py", True),
+    ]
+    files = [
+        ("tests/examples/machine" / pathlib.Path(f), has_spinfile)
+        for f, has_spinfile in _files
+    ]
+    if spinfile_only is True:
+        files = [f for f in files if f[1] is True]
+    return [pathlib.Path(f[0]).absolute() for f in files]

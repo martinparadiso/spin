@@ -6,6 +6,7 @@ import re
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+from conftest import python_examples
 
 import spin.cli
 import spin.utils.load
@@ -81,7 +82,7 @@ class TestSpinfileGeneration:
 
 
 class TestSpinfileLoad:
-    @pytest.mark.parametrize("file", glob.glob("tests/examples/*.py"))
+    @pytest.mark.parametrize("file", python_examples(spinfile_only=True))
     def test_load(self, file: str) -> None:
         found = spin.utils.spinfile_loader.spinfile(pathlib.Path(file), True)
         assert len(found) > 0
