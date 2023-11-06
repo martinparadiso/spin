@@ -5,7 +5,7 @@
 set -e
 
 # Create a new spinfilfocale.py in this directory
-spin init ubuntu:jammy --plugin=spin.plugin.cloud_init
+spin init ubuntu:focal --plugin=spin.plugin.cloud_init
 
 # Create and start the machine
 spin up
