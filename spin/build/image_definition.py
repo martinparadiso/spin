@@ -47,49 +47,6 @@ class BuildTools:
         self.commands.append(command)
 
 
-class RemoteImage:
-    """Remote source image, accessed through network"""
-
-    def __init__(self, url: str, substitutions: None | dict[str, str] = None):
-        """
-        Args:
-            url: URL for the image, supports any protocol curl supports
-            substitutions: A dictionary of tokens the library must
-                replace before using the URL, useful for defining structured
-                URLs and images supporting multiple variants or architectures.
-                Currently supports only ``architecture`` to replace the
-                architecture. See the examples below.
-
-        Examples:
-            Define a remote image without variations::
-
-                img = RemoteImage('https://db.local/image.img')
-
-            Define a multi-arch image, providing a templated URL::
-
-                img = RemoteImage('ftp://db.local/{arch}/image.img',
-                                  substitutions={'architecture': 'arch'})
-        """
-        self.url_template = url
-        self.substitutitons = substitutions or dict()
-
-    def url(self, arch: None | str = None) -> str:
-        """Return the URL for the image
-
-        Args:
-            arch: The desired architecture, may be relevant to the URL
-
-        Raises:
-            ValueError: If a required substitution is missing
-        """
-        ret = self.url_template
-        if "architecture" in self.substitutitons:
-            if arch is None:
-                raise ValueError(f"Missing value for arch")
-            ret = ret.format(**{self.substitutitons["architecture"]: arch})
-        return ret
-
-
 @dataclasses.dataclass
 class ExperimentalFeatures:
     """Collection of features not fully tested, requiring explicit activation."""
@@ -163,8 +120,9 @@ class ImageDefinition(BuildTools):
         normally default to ``root:None``.
         """
 
-        self.retrieve_from: None | pathlib.Path | RemoteImage = None
-        """Image file retrieval method"""
+        self.retrieve_from: None | str = None
+        """URL to retrieve the image from. If no protocol is specified, it is
+        assumed as a local file."""
 
         self.on_install: list[Action] = []
         """Actions to execute, in order, during installation.

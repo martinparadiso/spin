@@ -13,7 +13,6 @@ from unittest.mock import patch
 import pytest
 
 import spin.plugin.images
-from spin.build.image_definition import RemoteImage
 
 
 class FileServer:
@@ -89,9 +88,9 @@ def test_ubuntu_single_extraction() -> None:
         datetime.datetime(2023, 10, 5, 0, 0),
     ]
     assert [
-        i.retrieve_from.url("amd64")[len(getter.proto + "://" + getter.url) :]
+        i.retrieve_from[len(getter.proto + "://" + getter.url) :]
         for i in result
-        if isinstance(i.retrieve_from, RemoteImage)
+        if i.retrieve_from is not None
     ] == [
         "server/releases/lunar/release-20230420/ubuntu-23.04-server-cloudimg-amd64.img",
         "server/releases/lunar/release-20230502/ubuntu-23.04-server-cloudimg-amd64.img",

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 import spin.build.builder
-from spin.build.image_definition import ImageDefinition, RemoteImage
+from spin.build.image_definition import ImageDefinition
 from spin.image.image import Image
 
 
@@ -36,7 +36,7 @@ def test_mocked_build(
     fake_image_path = tmp_path / "fake_image.img"
     fake_image_path.touch()
     image_def = MagicMock(ImageDefinition())
-    image_def.retrieve_from = fake_image_path
+    image_def.retrieve_from = str(fake_image_path)
     image_def.base = None
     db_mock.return_value.get.return_value = None
 
@@ -77,8 +77,8 @@ def test_failure_during_build(
 ) -> None:
     """Test the rollback-avility of the build procedure"""
     under_test = spin.build.builder.SingleBuilder(MagicMock(ImageDefinition()))
-    under_test.image_definition.retrieve_from = tmp_path / "fake.img"
-    under_test.image_definition.retrieve_from.touch()
+    under_test.image_definition.retrieve_from = str(tmp_path / "fake.img")
+    (tmp_path / "fake.img").touch()
 
     steps = [MagicMock(spin.build.builder.BuildStep) for _ in range(5)]
     for i in range(5):
@@ -106,8 +106,8 @@ class TestLocalImage:
         "in_out",
         [
             (None, False),
-            (pathlib.Path(), True),
-            (RemoteImage(""), False),
+            ("./disk.img", True),
+            ("", True),
         ],
     )
     def test_acceptance(self, in_out: tuple[Any, bool]) -> None:
@@ -122,7 +122,7 @@ class TestLocalImage:
     @patch("spin.build.builder.Database", autospec=True)
     def test_output(self, db_mock: MagicMock) -> None:
         """Make sure the image is added to the output"""
-        retrieve_from = MagicMock(pathlib.Path())
+        retrieve_from = "/some/file/somewhere"
         image_def = MagicMock(ImageDefinition())
         image_def.retrieve_from = retrieve_from
         builder = MagicMock(spin.build.builder.SingleBuilder(image_def))
@@ -132,7 +132,7 @@ class TestLocalImage:
         under_test.process(builder)
 
         db_mock.assert_not_called()
-        assert builder.image.file == image_def.retrieve_from
+        assert builder.image.file == pathlib.Path(image_def.retrieve_from)
 
 
 class TestMetadataInheritance:

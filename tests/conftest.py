@@ -7,7 +7,7 @@ import pytest
 
 import spin.define
 import spin.utils.config
-from spin.build.builder import Builder, RemoteImage
+from spin.build.builder import Builder
 from spin.define.image import ManualInstall
 from spin.image.image import Image
 
@@ -64,9 +64,8 @@ def minimal_linux() -> Image:
         A small Linux image, and the root password.
     """
     with spin.define.image("alpine", "3.6") as alpine:
-        alpine.retrieve_from = RemoteImage(
-            "https://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/alpine-virt-3.16.2-x86_64.iso",
-        )
+        alpine.retrieve_from = "https://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/alpine-virt-3.16.2-x86_64.iso"
+
         alpine.props.architecture = "x86_64"
         alpine.props.type = "installation-media"
 

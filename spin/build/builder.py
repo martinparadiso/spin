@@ -25,7 +25,7 @@ from spin.machine.machine import Machine
 
 import spin.utils.info
 import spin.utils.config
-from spin.build.image_definition import ImageDefinition, RemoteImage
+from spin.build.image_definition import ImageDefinition
 from spin.image.database import Database
 from spin.image.image import Image
 from spin.utils.dependency import dep, dependencies
@@ -511,13 +511,14 @@ class LocalImage(BuildStep):
 
     @classmethod
     def accepts(cls, builder: SingleBuilder) -> bool:
-        return isinstance(builder.image_definition.retrieve_from, pathlib.Path)
+        return builder.image_definition.retrieve_from is not None and not is_remote(
+            builder.image_definition.retrieve_from
+        )
 
     def process(self, builder: SingleBuilder):
         assert self.builder.image is not None
-        assert self.builder.image_definition.retrieve_from is not None
-        assert isinstance(builder.image_definition.retrieve_from, pathlib.Path)
-        self.builder.image.file = builder.image_definition.retrieve_from
+        assert builder.image_definition.retrieve_from is not None
+        self.builder.image.file = pathlib.Path(builder.image_definition.retrieve_from)
 
 
 @dep(requires=RunCommands, provides="IMAGE_FILE")
@@ -571,7 +572,7 @@ class ExtractNewImage(BuildStep):
         # We copy-out the file to make sure we can do that
         copy_to = spin.utils.config.conf.database_folder / disk.uuid
         result = shutil.copyfile(disk.location, copy_to)
-        builder.image.file = result
+        builder.image.file = pathlib.Path(result)
 
 
 @dep(requires=ExtractNewImage)
@@ -598,6 +599,20 @@ class DestroyHelper(BuildStep):
             return
 
 
+def is_remote(uri: str) -> bool:
+    _KNOWN_REMOTES = (
+        p + "://"
+        for p in (
+            "ftp",
+            "sftp",
+            "http",
+            "https",
+        )
+    )
+
+    return any(uri.startswith(p) for p in _KNOWN_REMOTES)
+
+
 @dep(requires=ImageMetadata, provides="IMAGE_FILE")
 class RemoteImageStep(BuildStep):
     """Retrieve the base image from the network
@@ -610,24 +625,19 @@ class RemoteImageStep(BuildStep):
 
     @classmethod
     def accepts(cls, builder: SingleBuilder) -> bool:
-        # image = builder.image
-        # return image.base_image is not None or image.file is not None
-        return isinstance(builder.image_definition.retrieve_from, RemoteImage)
+        return builder.image_definition.retrieve_from is not None and is_remote(
+            builder.image_definition.retrieve_from
+        )
 
     def process(self, builder: SingleBuilder):
         imgdef = builder.image_definition
-        is_remote = isinstance(imgdef.retrieve_from, RemoteImage)
-
-        if not is_remote:
-            return True, None
-
-        if isinstance(imgdef.retrieve_from, RemoteImage):
-            url = imgdef.retrieve_from.url(builder.target_architecture)
-        else:
-            raise Exception("This is a bug. Please report it.")
 
         if builder.image is None:
-            raise Exception("This is a bug. Please report it.")
+            raise Bug
+
+        url = imgdef.retrieve_from
+        if url is None:
+            raise Bug
 
         try:
             with NetworkTransfer(url, None) as transfer:

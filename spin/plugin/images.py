@@ -11,7 +11,7 @@ from typing import Literal
 
 import spin.define
 import spin.plugin.api.register
-from spin.build.builder import ImageDefinition, RemoteImage
+from spin.build.builder import ImageDefinition
 from spin.utils import constants, ui
 from spin.utils.constants import OS
 
@@ -54,7 +54,7 @@ class UbuntuGetter:
                 date_without_suffix, "%Y%m%d"
             ).date()
             with spin.define.image("ubuntu", data["release"]) as idef:
-                idef.retrieve_from = RemoteImage(
+                idef.retrieve_from = (
                     self.proto
                     + "://"
                     + self.url
@@ -107,9 +107,7 @@ def opensuse() -> list[ImageDefinition]:
         microos.props.supports_backing = False
 
     with spin.define.image("opensuse", "microos") as microos:
-        microos.retrieve_from = RemoteImage(
-            "http://download.opensuse.org/tumbleweed/appliances/openSUSE-MicroOS.x86_64-kvm-and-xen.qcow2"
-        )
+        microos.retrieve_from = "http://download.opensuse.org/tumbleweed/appliances/openSUSE-MicroOS.x86_64-kvm-and-xen.qcow2"
         set_common(microos, "microos")
 
     return [microos]
