@@ -1,15 +1,24 @@
+import datetime
 import importlib
 import os
 import pathlib
 import urllib.request
+from typing import Any
 
 import pytest
 
 import spin.define
+import spin.image.database
 import spin.utils.config
 from spin.build.builder import Builder
+from spin.build.image_definition import (
+    ExperimentalFeatures,
+    ImageDefinition,
+    Properties,
+)
 from spin.define.image import ManualInstall
 from spin.image.image import Image
+from spin.utils.constants import OS
 
 
 def pytest_addoption(parser):
@@ -126,8 +135,47 @@ def configured_home(tmp_path: pathlib.Path):
     (tmp_path / ".local" / "share").mkdir(parents=True)
     spin.initlib(home=tmp_path, user_conf=False)
     spin.utils.config.conf.init_conf()
+    spin.image.database.Database().remotes.initdb()
 
     yield tmp_path
+
+
+@pytest.fixture
+def image_definition_ubuntu_focal() -> ImageDefinition:
+    """Provide an ubuntu-focal image definition"""
+
+    # Extracted from an usable definition database
+    data: dict[str, Any] = {
+        "base": None,
+        "commands": [],
+        "name": "ubuntu",
+        "tag": "focal",
+        "props": Properties(
+            architecture="x86_64",
+            supports_backing=True,
+            contains_os=True,
+            usernames=[],
+            cloud_init=True,
+            ignition=None,
+            requires_install=False,
+            format="qcow2",
+            type="disk-image",
+            origin_time=datetime.datetime(2023, 10, 11, 0, 0),
+        ),
+        "os": OS.Identification(
+            family="posix", subfamily="linux", distribution="ubuntu", version="focal"
+        ),
+        "credentials": None,
+        "retrieve_from": "http://cloud-images.ubuntu.com/server/releases/focal/release-20231011/ubuntu-20.04-server-cloudimg-amd64.img",
+        "on_install": [],
+        "usable": False,
+        "module": None,
+        "experimental": ExperimentalFeatures(expand_root=None),
+    }
+
+    imgdef = ImageDefinition()
+    imgdef.__dict__.update(data)
+    return imgdef
 
 
 def python_examples(spinfile_only: bool):

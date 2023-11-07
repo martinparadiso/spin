@@ -76,9 +76,9 @@ A *simple* diagram of the situation::
 class OS:
     """Stores OS version information."""
 
-    FamilyLiteral = Literal["posix", "windows"]
+    FamilyLiteral = Union[Literal["posix", "windows"], str]
 
-    SubfamilyLiteral = Literal["linux", "windows"]
+    SubfamilyLiteral = Union[Literal["linux", "windows"], str]
 
     Distribution: TypeAlias = str
     """OS distribution"""
@@ -119,3 +119,34 @@ When setting up a new machine with no defined backend, the
 library will choose according to this list; with descending
 preference.
 """
+
+DISK_FORMAT_LITERAL = Literal["qcow2", "iso"]
+
+DISK_TYPE_LITERAL = Literal["disk-image", "installation-media"]
+
+
+def sanitize_arch(in_: str) -> None | SPIN_ARCHITECTURE_CODES_LITERAL:
+    if in_ in NORMALIZE_ARCHITECTURE_CODE:
+        return NORMALIZE_ARCHITECTURE_CODE[in_]  # type: ignore[index]
+    return None
+
+
+def sanitize_os_id(*serial_id: str | None) -> None | OS.Identification:
+    if len(serial_id) != 4:
+        return None
+    if all(part is None for part in serial_id):
+        return None
+
+    return OS.Identification(*serial_id)
+
+
+def sanitize_disk_format(in_: str) -> None | DISK_FORMAT_LITERAL:
+    if in_ in get_args(DISK_FORMAT_LITERAL):
+        return in_  # type: ignore[return-value]
+    return None
+
+
+def sanitize_disk_type(in_: str) -> None | DISK_TYPE_LITERAL:
+    if in_ in get_args(DISK_TYPE_LITERAL):
+        return in_  # type: ignore[return-value]
+    return None

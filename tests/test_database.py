@@ -14,8 +14,8 @@ from spin.image.image import Image
 
 
 @patch(
-    "spin.image.database.register",
-    new=Mock(**{"image_providers": []}),
+    "spin.image.database.DefinitionDatabase",
+    autospec=True,
 )
 class TestDatabase:
     DATABASE_FOLDER = "image-db"
@@ -29,7 +29,7 @@ class TestDatabase:
     dbfolder: pathlib.Path
     dbfile: pathlib.Path
 
-    def test_init(self, tmp_path) -> None:
+    def test_init(self, defmock: Mock, tmp_path) -> None:
         self.__class__.dbfolder = tmp_path
         (self.__class__.dbfolder / "images").mkdir()
         self.__class__.dbfile = self.__class__.dbfolder / "images.json"
@@ -39,7 +39,7 @@ class TestDatabase:
         db.local.image_folder = self.dbfolder / "images"
         db.local.db_file = self.dbfile
 
-    def test_add_image(self, tmp_path):
+    def test_add_image(self, defmock: Mock, tmp_path):
         from pathlib import Path
 
         db = Database()
@@ -59,11 +59,11 @@ class TestDatabase:
         assert image.file.exists()
         assert image.file.is_file()
 
-    def test_existing_image(self):
+    def test_existing_image(self, defmock: Mock):
         db = Database()
         self.init(db)
 
-        images = db.images(local_only=True)
+        images = db.images()
         assert len(images) == 1
         assert self.__class__.NULLIMG_1024_DIGEST in [
             str(i.hexdigest()) for i in images if isinstance(i, Image)
@@ -83,7 +83,7 @@ class TestDatabase:
             assert img_.name is None
             assert img_.tag is None
 
-    def test_add_another_img(self, tmp_path):
+    def test_add_another_img(self, defmock: Mock, tmp_path):
         from pathlib import Path
 
         db = Database()
@@ -104,11 +104,11 @@ class TestDatabase:
         assert image.file.exists()
         assert image.file.is_file()
 
-    def test_existing_images(self):
+    def test_existing_images(self, defmock: Mock):
         db = Database()
         self.init(db)
 
-        images = db.images(local_only=True)
+        images = db.images()
         assert len(images) == 2
         assert self.__class__.NULLIMG_1024_DIGEST in [
             str(i.hexdigest()) for i in images if isinstance(i, Image)
@@ -136,11 +136,14 @@ class TestDatabase:
             assert img.tag is None
 
 
-@patch("spin.image.database.register", autospec=True)
+@patch(
+    "spin.image.database.DefinitionDatabase",
+    autospec=True,
+)
 @patch("spin.image.local_database.Image", autospec=True)
 def test_return_priority(
     ImageMock: Mock,
-    register_mock: Mock,
+    defdb_mock: Mock,
     tmp_path: pathlib.Path,
 ) -> None:
     """The database must prioritize Images over ImageDefinitions"""
@@ -150,15 +153,19 @@ def test_return_priority(
         image.configure_mock(**kwargs)
         return image
 
-    ImageMock.configure_mock(side_effect=image_generator)
-    register_mock.image_providers = []
+    image_defs = []
     for i in range(5):
         imgdef = Mock(ImageDefinition)
         imgdef.configure_mock(name="name_" + string.ascii_lowercase[i])
         imgdef.configure_mock(tag="tag_a")
         imgdef.configure_mock(usable=False)
-        provider = Mock(return_value=[imgdef])
-        register_mock.image_providers.append(provider)
+        image_defs.append(imgdef)
+
+    def query_mock(name=None, tag=None, digest=None):
+        return [i for i in image_defs if i.name == name and i.tag == tag]
+
+    ImageMock.configure_mock(side_effect=image_generator)
+    defdb_mock.return_value.query.side_effect = query_mock
     tmp_dbfile = tmp_path / "tmp_db"
     with open(tmp_dbfile, "w", encoding="utf8") as data:
         data.write(
@@ -171,7 +178,6 @@ def test_return_priority(
     imagedb = Database()
     imagedb.local.db_file = tmp_dbfile
     rets = imagedb.get(("name_a", "tag_a"))
-    assert len(imagedb.definitions) == 5
     assert len(rets) == 2
     assert rets[0].usable
     assert not rets[1].usable

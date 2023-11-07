@@ -79,10 +79,13 @@ class SpinfileLoader(DefinitionLoader):
         machine.spinfile = self.file
         self._set_network(machine)
         if isinstance(image, tuple):
-            found_image = find_image(image)
-            if found_image is None:
-                raise errors.NotFound(image)
-            image = found_image
+            if self.complete_definition:
+                found_image = find_image(image)
+                if found_image is None:
+                    raise errors.NotFound(image)
+                image = found_image
+            else:
+                image = None
         if image is not None:
             machine.image = image
 

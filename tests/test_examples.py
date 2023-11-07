@@ -13,8 +13,10 @@ from typing_extensions import TypeAlias
 
 import spin.cli
 import spin.cli._down
+import spin.image.database
 import spin.machine.start_steps
 import spin.utils.ui
+from spin.build.image_definition import ImageDefinition
 from spin.machine.machine import has_backend
 
 
@@ -33,6 +35,7 @@ def test_example(
     file: pathlib.Path,
     cwd_to_tmp: pathlib.Path,
     configured_home: pathlib.Path,
+    image_definition_ubuntu_focal: ImageDefinition,
     test_proxy: None | str,
 ) -> None:
     spin.utils.ui.instance().verbose = True
@@ -40,6 +43,7 @@ def test_example(
     shutil.copy(file, cwd_to_tmp / "spinfile.py")
     assert file.parent.parent.parent.name == "tests"
     shutil.copytree(file.parent.parent.parent, cwd_to_tmp / "tests")
+    spin.image.database.Database().remotes.add(image_definition_ubuntu_focal)
     machines = []
     machines = spin.cli.up(".", return_machines=True)
     assert len(machines) >= 1

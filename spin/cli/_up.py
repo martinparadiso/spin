@@ -69,7 +69,7 @@ def up(
     machines_: list[Machine] = []
     for machine in machines:
         if not isinstance(machine, Machine):
-            found_machine = load(machine, disable_definition=True)
+            found_machine = load(machine, disable_definition=False)
             if found_machine is None:
                 raise ValueError("Could not found machine")
         else:

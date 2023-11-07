@@ -5,6 +5,7 @@ import datetime
 
 import pathlib
 import string
+from types import ModuleType
 
 from typing_extensions import Literal
 from spin.machine.action import Action
@@ -124,6 +125,9 @@ class ImageDefinition(BuildTools):
         """URL to retrieve the image from. If no protocol is specified, it is
         assumed as a local file."""
 
+        self.digest: None | str = None
+        """Image file digest."""
+
         self.on_install: list[Action] = []
         """Actions to execute, in order, during installation.
         """
@@ -133,6 +137,9 @@ class ImageDefinition(BuildTools):
         
         Since this is an image *definition* it always returns False.
         """
+
+        self.module: None | ModuleType = None
+        """The module or package defining this image"""
 
         self.experimental = ExperimentalFeatures()
 

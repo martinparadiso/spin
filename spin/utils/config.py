@@ -180,6 +180,11 @@ class Configuration:
         return self.data_folder / "images.json"
 
     @property
+    def definitions_file(self) -> pathlib.Path:
+        """SQLite file containing definitions."""
+        return self.data_folder / "image_definitions.sqlite"
+
+    @property
     def networks_file(self) -> pathlib.Path:
         """JSON file containing networks"""
         return self.data_folder / "networks.json"

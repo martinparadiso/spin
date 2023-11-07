@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 from typing import Any, Callable, Collection, List, Optional, Type, TypeVar, overload
 
 from pydantic import BaseModel
@@ -9,11 +10,13 @@ from pydantic import BaseModel
 import spin.utils.config
 from spin.backend.base import Backend
 from spin.build.image_definition import ImageDefinition
+from spin.image.database import DefinitionDatabase
 from spin.machine.hardware import Disk
 from spin.machine.machine import Machine
-from spin.machine.steps import CreationTask, CommonStep, CreationStep, ProcessableStep
+from spin.machine.steps import CommonStep, CreationStep, CreationTask, ProcessableStep
 from spin.utils import dependency
 from spin.utils.dependency import Dependencies, dep
+from spin.utils.ui import UI
 
 IMAGE_PROVIDER_SIGNATURE = Callable[[], List[ImageDefinition]]
 DISK_CREATOR_SIGNATURE = Callable[[Disk], None]
@@ -107,6 +110,26 @@ class PluginRegister:
             return f
 
         return wrap
+
+    def populate_image_database(self, defdb: DefinitionDatabase, *, ui: UI) -> None:
+        """Call all image-providers and to populate the image definition database.
+
+        Args:
+            defdb: An *already initialized* definition database.
+            ui: The user interface to write messages to.
+        """
+        for plugin in ui.iterate(
+            self.image_providers, fmt=lambda p: p.__module__ + "." + p.__name__
+        ):
+            images = plugin()
+            # HACK: Is there a cost to re-import a -probably- already imported
+            # module?
+            curr_module = importlib.import_module(plugin.__module__)
+            for image in images:
+                image.module = curr_module
+            ui.notice(f"Found {len(images)} images")
+            for image in images:
+                defdb.add(image)
 
     def disk_creator(self, fmt: set[str]):
         """Register a function as a disk creator.

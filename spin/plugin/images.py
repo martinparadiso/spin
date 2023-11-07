@@ -60,6 +60,8 @@ class UbuntuGetter:
                     + self.url
                     + data["versions"][datestr]["items"]["disk1.img"]["path"]
                 )
+                idef.digest = data["versions"][datestr]["items"]["disk1.img"]["sha256"]
+
                 idef.props.cloud_init = True
                 idef.props.requires_install = False
                 idef.props.type = "disk-image"

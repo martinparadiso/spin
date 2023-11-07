@@ -49,6 +49,7 @@ autodoc_mock_imports = [
     "pydantic",
     "xdg",
     "yaml",
+    "sqlalchemy",
 ]
 
 intersphinx_mapping = {"python": ("https://docs.python.org/3.10", None)}

@@ -12,8 +12,8 @@ from typing import Any, Callable, Sequence, get_args
 import pkg_resources
 
 import spin.cli._build
+import spin.cli._image
 import spin.utils.config
-import spin.utils.ui
 from spin.cli import _register
 from spin.cli._check_system import check_system
 from spin.cli._connect import scp_to, ssh

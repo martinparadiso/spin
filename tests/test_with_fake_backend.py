@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ipaddress
+import os
 import pathlib
 import subprocess
 from unittest.mock import patch
@@ -11,6 +12,8 @@ import pytest
 import utils
 
 import spin.cli._status
+import spin.image.database
+from spin.build.image_definition import ImageDefinition
 from spin.machine.tracker import Tracker
 from spin.utils import ui
 
@@ -19,9 +22,11 @@ from spin.utils import ui
 def test_minimal(
     tmp_path: pathlib.Path,
     configured_home: pathlib.Path,
+    image_definition_ubuntu_focal: ImageDefinition,
     test_proxy: None | str,
 ) -> None:
     utils.FakeBackend.reset_backend()
+    spin.image.database.Database().remotes.add(image_definition_ubuntu_focal)
     folder = tmp_path
     spinfile = folder / "spinfile.py"
 
@@ -61,8 +66,11 @@ def test_minimal(
 def test_minimal_with_exception_in_step(
     tmp_path: pathlib.Path,
     configured_home: pathlib.Path,
+    image_definition_ubuntu_focal: ImageDefinition,
     test_proxy: None | str,
 ) -> None:
+    spin.image.database.Database().remotes.add(image_definition_ubuntu_focal)
+
     class CustomException(Exception):
         ...
 
@@ -113,8 +121,10 @@ def test_minimal_with_exception_in_step(
 def test_two_machines(
     tmp_path: pathlib.Path,
     configured_home: pathlib.Path,
+    image_definition_ubuntu_focal: ImageDefinition,
     test_proxy: None | str,
 ) -> None:
+    spin.image.database.Database().remotes.add(image_definition_ubuntu_focal)
     utils.FakeBackend.reset_backend()
     folder = tmp_path
     spinfile = folder / "spinfile.py"
@@ -181,6 +191,25 @@ def test_two_machines(
 )
 @pytest.mark.requires_backend
 @pytest.mark.slow
-def test_script(script: pathlib.Path, tmp_path: pathlib.Path, test_proxy: None | str):
+def test_script(
+    script: pathlib.Path,
+    configured_home: pathlib.Path,
+    image_definition_ubuntu_focal: ImageDefinition,
+    tmp_path: pathlib.Path,
+    test_proxy: None | str,
+):
+    spin.image.database.Database().remotes.add(image_definition_ubuntu_focal)
     folder = tmp_path
-    subprocess.run(["sh", script.absolute()], cwd=folder, check=True)
+    spenv = os.environ.copy()
+    spenv.update(
+        {
+            "XDG_CONFIG_HOME": str(configured_home / ".config"),
+            "XDG_DATA_HOME": str(configured_home / ".local" / "share"),
+        }
+    )
+    subprocess.run(
+        ["sh", script.absolute()],
+        env=spenv,
+        cwd=folder,
+        check=True,
+    )
