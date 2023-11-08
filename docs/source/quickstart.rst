@@ -29,20 +29,28 @@ Installation
     **TL;DR**: Install with `pipx`:
 
     .. parsed-literal::
-        pipx install 'spin[libvirt] @ \ |pip_url|\ '
-        
+
+        pipx install 'spin[libvirt] @ |pip_url| '
 
     or manually, create a *virtualenv* to avoid problems, and 
     install with pip:
 
-    .. parsed-literal:: shell
+    .. parsed-literal::
         
         python3 -m venv .env && source .env/bin/activate # Or activate.fish for fish shell
-        pip install 'spin[libvirt] @\ |pip_url|\ '
+        pip install 'spin[libvirt] @ |pip_url|'
         deactivate # Deactivate the environment since it's not necessary
 
         # Alias the python module to save on typing
         alias spin="$PWD/.env/bin/python -m spin"
+
+    And finally initialize the configuration and database:
+
+    .. parsed-literal::
+
+        spin init-conf # Create the initial folder 
+        spin update-database --init # Update the local database of available images
+
     
     The rest of the document assumes you use the alias.
 
@@ -68,6 +76,15 @@ will be handy to perform the following alias, to avoid typing
 .. code-block:: shell
 
     alias spin="$PWD/.env/bin/python -m spin"
+
+
+Now you have to generate the config folder structure, and
+pull the default available images:
+
+.. parsed-literal::
+
+    spin init-conf
+    spin update-database --init
 
 You can now deactivate the *virtualenv* by calling:
 

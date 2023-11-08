@@ -16,7 +16,7 @@ extra_vars = {
     "module_name": "spin",
     "min_python_version": "3.8",
     "project_url": "https://github.com/martinparadiso/spin",
-    "pip_url": "``https://github.com/martinparadiso/spin``",
+    "pip_url": "https://github.com/martinparadiso/spin",
     "version": pkg_resources.get_distribution("spin").version,
     "version_output": f"``spin {pkg_resources.get_distribution('spin').version}``",
 }
