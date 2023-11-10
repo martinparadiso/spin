@@ -44,3 +44,12 @@ def can_write(file: pathlib.Path) -> bool:
     if not file.exists():
         raise ValueError("File not present")
     return os.access(file, os.W_OK)
+
+
+def kvm_present() -> bool:
+    """Check if the host has /dev/kvm available.
+
+    The function will only check if the KVM pseudo-file is present; not
+    if the user has write access to it.
+    """
+    return pathlib.Path("/dev/kvm").exists()

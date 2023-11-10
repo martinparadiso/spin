@@ -335,16 +335,24 @@ def _machine_info(machine: DefinedMachine, xml: ET.Element):
 @_for_machine
 def _machine_virt_mode(machine: DefinedMachine, xml: ET.Element):
     if machine.hardware_virtualization == "no":
-        xml.attrib["type"] = "qemu"
+        virtualize = False
+    elif machine.hardware_virtualization == "force":
+        virtualize = True
     else:
-        xml.attrib["type"] = "kvm"
-    os = SE(xml, "os")
+        virtualize = spin.utils.info.kvm_present()
+
     if machine.image is None:
         arch = spin.utils.info.host_architecture()
     else:
         arch = machine.image.props.architecture or spin.utils.info.host_architecture()
 
-    if spin.utils.info.host_architecture() == arch:
+    if arch != spin.utils.info.host_architecture():
+        virtualize = False
+    # TODO: KVM is exclusive to Linux, macOS uses HVF
+    xml.attrib["type"] = "kvm" if virtualize else "qemu"
+    os = SE(xml, "os")
+
+    if virtualize and spin.utils.info.host_architecture() == arch:
         cpu_mode = settings.get().cpu_mode
     else:
         cpu_mode = "maximum"

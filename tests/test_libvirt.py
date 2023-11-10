@@ -18,6 +18,7 @@ libvirt = pytest.importorskip("libvirt", reason="Could not load libvirt module")
 
 import spin.plugin.libvirt
 import spin.plugin.libvirt.checks
+import spin.plugin.libvirt.xml
 from spin.machine.network import LAN
 from spin.plugin.libvirt.core import LibvirtBackend
 from spin.utils.config import conf
@@ -350,3 +351,59 @@ class TestNetworkDestructionStep:
         if is_active is True:
             net.destroy.assert_called_once()
         net.undefine.assert_called_once()
+
+
+@patch("spin.utils.info.kvm_present")
+@patch("spin.utils.info.host_architecture")
+class TestVirtualizationCapabilities:
+    """Test the correct detection of virtualization mode depending on host capabilities"""
+
+    def test_no_kvm(self, host_architecture: MagicMock, kvm_present: MagicMock) -> None:
+        machine = MagicMock(Machine())
+        xml = ET.Element("domain")
+
+        machine.hardware_virtualization = "prefer"
+        machine.image.props.architecture = "x86_64"
+        kvm_present.return_value = False
+        host_architecture.return_value = "x86_64"
+
+        spin.plugin.libvirt.xml._machine_virt_mode(machine, xml)
+
+        assert xml.attrib["type"] == "qemu"
+        cpu_node = xml.find("cpu")
+        assert cpu_node is not None
+        assert cpu_node.attrib["mode"] == "maximum"
+
+    def test_kvm(self, host_architecture: MagicMock, kvm_present: MagicMock) -> None:
+        machine = MagicMock(Machine())
+        xml = ET.Element("domain")
+
+        machine.hardware_virtualization = "prefer"
+        machine.image.props.architecture = "x86_64"
+        kvm_present.return_value = True
+        host_architecture.return_value = "x86_64"
+
+        spin.plugin.libvirt.xml._machine_virt_mode(machine, xml)
+
+        assert xml.attrib["type"] == "kvm"
+        cpu_node = xml.find("cpu")
+        assert cpu_node is not None
+        assert cpu_node.attrib["mode"] == "host-passthrough"
+
+    def test_diff_arch(
+        self, host_architecture: MagicMock, kvm_present: MagicMock
+    ) -> None:
+        machine = MagicMock(Machine())
+        xml = ET.Element("domain")
+
+        machine.hardware_virtualization = "prefer"
+        machine.image.props.architecture = "x86_64"
+        kvm_present.return_value = True
+        host_architecture.return_value = "arm64"
+
+        spin.plugin.libvirt.xml._machine_virt_mode(machine, xml)
+
+        assert xml.attrib["type"] == "qemu"
+        cpu_node = xml.find("cpu")
+        assert cpu_node is not None
+        assert cpu_node.attrib["mode"] == "maximum"
