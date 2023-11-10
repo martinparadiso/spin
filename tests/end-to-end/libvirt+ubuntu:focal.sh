@@ -49,11 +49,11 @@ export XDG_CONFIG_HOME="$TEST_HOME"/.config
 export XDG_DATA_HOME="$TEST_HOME"/.local/share
 
 stage 'Printing host information for debugging'
-uname --all       # For the kernel version
-cat /proc/cpuinfo # CPU capabilities and version
-sudo kvm-ok       # KVM configuration
-python --version  # Python version
-virsh --version   # Virsh version
+uname --all         # For the kernel version
+cat /proc/cpuinfo   # CPU capabilities and version
+sudo kvm-ok || true # KVM configuration/support
+python --version    # Python version
+virsh --version     # Virsh version
 
 stage 'Creating virtual-env and installing dependencies'
 python -m venv .env
